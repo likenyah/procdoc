@@ -16,7 +16,7 @@
 # -----------------------------------------------------------------------------
 
 ##
-# warning - Write a warning to stderr(3).
+# warning - Write a warning message to stderr(3).
 #
 # @msg: Message to write.
 #
@@ -27,7 +27,7 @@ function warning(msg)
 }
 
 ##
-# warningfl - Write an error message with file information to stderr(3) and exit.
+# warningfl - Write a warning message with file information to stderr(3).
 #
 # @file: File in which the error occurred.
 # @line: Line number on which the error occurred.
@@ -51,7 +51,7 @@ function error(msg)
 }
 
 ##
-# errorfl - Write an error message with file information to stderr(3) and exit.
+# errorfl - Write an error message with file information to stderr(3).
 #
 # @file: File in which the error occurred.
 # @line: Line number on which the error occurred.
