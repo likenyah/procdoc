@@ -90,6 +90,53 @@ function fatalfl(file, line, msg)
 }
 
 ##
+# json_string_escape - Properly escape invalid JSON string content.
+#
+# @s: String to work on.
+#
+# @return: String suitable for substitution into a JSON string.
+function json_string_escape(s)
+{
+	# RFC 8259 says the following:
+	#
+	# > All Unicode characters may be placed within the quotation marks,
+	# > except for the characters that MUST be escaped: quotation mark,
+	# > reverse solidus, and the control characters (U+0000 through
+	# > U+001F).
+	#
+	# However, we assume that we are only likely to see the following raw
+	# characters in text we care about:
+	#
+	# * U+0000 NUL
+	# * U+0007 BEL
+	# * U+0008 BS
+	# * U+0009 HT
+	# * U+000B VT
+	# * U+000C FF
+	# * U+000D CR
+	# * U+0021 Quotation Mark
+	# * U+005C Reverse Solidus
+	#
+	# Note that LF is absent here, since we consume the input in a
+	# line-wise manner.
+	gsub(/\\/, "\\\\", s)
+	gsub(/"/, "\\\"", s)
+	gsub(/\0/, "\\0", s)
+	gsub(//, "\\a", s)
+	gsub(//, "\\b", s)
+	gsub(//, "\\f", s)
+	gsub(//, "\\r", s)
+	gsub(/	/, "\\t", s)
+	gsub(//, "\\v", s)
+
+	# Workaround for nawk(1) matching the terminating null byte of a
+	# string.
+	sub(/\\0$/, "", s)
+
+	return s
+}
+
+##
 # filetype_get - Guess the type of a given file based on its name.
 #
 # @file: Path to file.
@@ -293,6 +340,228 @@ function block_read(fileinfo, blocks, default_type,    d, f, i, id, n, r, s, t)
 }
 
 ##
+# block_write - Write a JSON block to an output.
+#
+# @output:  Output file to write to.
+# @blocks:  Array of blocks to read from.
+# @id:      Identifier of the block to write to the output file.
+# @content: Blocktype-specific content. For generic blocks, this is just an
+#           array of all lines in the block with their lead stripped. For
+#           functions, see block_process_function().
+#
+# @return: None.
+function block_write(output, blocks, id, content,                         i, s)
+{
+	s = sprintf("{\"id\":%d", id)
+	s = sprintf("%s,\"type\":\"%s\"", s, blocks[id, "type"])
+	s = sprintf("%s,\"markup\":\"%s\"", s, blocks[id, "markup"])
+	s = sprintf("%s,\"file\":\"%s\"", s, json_string_escape(blocks[id, "file"]))
+	s = sprintf("%s,\"lines\":{\"initial\":%d,\"total\":%d}",
+	            s, blocks[id, "init"], blocks[id, "lines"])
+
+	if (blocks[id, "type"] == "generic") {
+		s = sprintf("%s,\"content\":[%s]", s, content)
+	} else {
+		s = sprintf("%s,\"content\":{", s)
+
+		s = sprintf("%s\"name\":\"%s\"",
+		            s, json_string_escape(content["name"]))
+
+		s = sprintf("%s,\"short-description\":\"%s\"",
+		            s, json_string_escape(content["shortdesc"]))
+
+		if (content["members"] > 0) {
+			s = sprintf("%s,\"members\":[", s)
+
+			for (i = 0; i < content["members"]; i++) {
+				s = sprintf("%s{\"name\": \"%s\"",
+				            s,
+				            content["member", i, "name"])
+
+				s = sprintf("%s,\"description\":\"%s\"},",
+				            s,
+				            json_string_escape(content["member", i, "desc"]))
+			}
+
+			sub(/,$/, "", s)
+			s = sprintf("%s]", s)
+		} else {
+			s = sprintf("%s,\"members\":[]", s)
+		}
+
+		if (content["paragraphs"] > 0) {
+			s = sprintf("%s,\"description\":[", s)
+
+			for (i = 0; i < content["paragraphs"]; i++) {
+				s = sprintf("%s{\"heading\": \"%s\"",
+				            s,
+				            content["paragraph", i, "heading"])
+
+				s = sprintf("%s,\"paragraph\":\"%s\"},",
+				            s,
+				            json_string_escape(content["paragraph", i, "desc"]))
+			}
+
+			sub(/,$/, "", s)
+			s = sprintf("%s]", s)
+		} else {
+			s = sprintf("%s,\"description\":[]", s)
+		}
+
+		s = sprintf("%s}", s)
+	}
+
+	s = sprintf("%s}", s)
+	printf("%s\n", s) >output
+}
+
+##
+# block_process_function - Process a function block and write it to and output.
+#
+# @output: Output file to write to.
+# @blocks: Array of blocks to read from.
+# @id:     Identifier of the block to process.
+#
+# @return: None.
+function block_process_function(output, blocks, id,   a, cl, nl, i, j, k, l, t)
+{
+	a["name"] = ""
+	a["shortdesc"] = ""
+	a["members"] = 0
+	a["paragraphs"] = 0
+
+	i = 0
+	t = blocks[id, "lines"]
+
+	cl = ""
+	nl = ""
+
+	while (i < t && blocks[id, "line", i] ~ /^[[:space:]]*$/)
+		i++
+
+	if (i == t) {
+		warningfl(blocks[id, "file"], blocks[id, "init"] + 1 + i,
+			  "empty function block")
+	}
+
+	# TODO: Handle enum/struct/etc <2021-08-19, Alex Minghella>
+	cl = blocks[id, "line", i]
+	if (cl ~ /^[[:alpha:]]+[[:space:]]+[[:alnum:]:_+-][[:alnum:]:_+-]+/) {
+		if (cl !~ /^function/) {
+			warningfl(blocks[id, "file"],
+			          blocks[id, "init"] + 1 + i,
+			          "ignoring non-function block")
+
+			return
+		} else {
+			sub(/^function[[:space:]]+/, "", cl)
+		}
+	}
+
+	if (match(cl, /^[[:alnum:]:_+-]+/)) {
+		a["name"] = substr(cl, RSTART, RLENGTH)
+	} else {
+		errorfl(blocks[id, "file"], blocks[id, "init"] + 1 + i,
+		        "missing title in function block")
+
+		return
+	}
+
+	# A short description is optional.
+	if (match(blocks[id, "line", i], /[[:space:]]+-[[:space:]]*.+$/)) {
+		a["shortdesc"] = substr(cl, RSTART, RLENGTH)
+		sub(/^[[:space:]]+-[[:space:]]*/, "", a["shortdesc"])
+	}
+
+	# Okay, we're done with the initial line. Eat through the rest of the
+	# block's content.
+	while (++i < t) {
+		j = a["members"]
+		k = a["paragraphs"]
+
+		cl = blocks[id, "line", i]
+		nl = blocks[id, "line", i + 1]
+		sub(/^[[:space:]]*/, "", cl)
+		sub(/^[[:space:]]*/, "", nl)
+
+		if (match(cl, /^@[[:alnum:]._-]+:/)) {
+			if (cl ~ /^@(return):/)
+				a["member", j, "name"] = substr(cl, RSTART, RLENGTH - 1)
+			else
+				a["member", j, "name"] = substr(cl, RSTART + 1, RLENGTH - 2)
+
+			m = substr(cl, RLENGTH + 1)
+			sub(/^[[:space:]]+/, "", m)
+
+			while (i < t \
+			       && nl != "" \
+			       && nl !~ /^@[[:alnum:]._-]+:/) {
+				i++
+				cl = blocks[id, "line", i]
+				nl = blocks[id, "line", i + 1]
+				sub(/^[[:space:]]*/, "", cl)
+				sub(/^[[:space:]]*/, "", nl)
+
+				m = sprintf("%s %s", m, cl)
+			}
+
+			sub(/^[[:space:]]+/, "", m)
+			a["member", j, "desc"] = m
+			a["members"]++
+		} else if (match(cl, /^([[:alnum:]]+:)?|^[[:alnum:] ]+:$/) && cl != "") {
+			# If no heading matches, we have RSTART = 1 and
+			# RLENGTH = 0, which gives us an empty heading and the
+			# whole line in m.
+			a["paragraph", k, "heading"] = substr(cl, RSTART, RLENGTH - 1)
+
+			m = substr(cl, RLENGTH + 1)
+			sub(/^[[:space:]]+/, "", m)
+
+			while (i < t && nl != "") {
+				i++
+				cl = blocks[id, "line", i]
+				nl = blocks[id, "line", i + 1]
+				sub(/^[[:space:]]*/, "", cl)
+				sub(/^[[:space:]]*/, "", nl)
+
+				m = sprintf("%s %s", m, cl)
+			}
+
+			sub(/^[[:space:]]+/, "", m)
+			a["paragraph", k, "desc"] = m
+			a["paragraphs"]++
+		}
+	}
+
+	block_write(output, blocks, id, a)
+}
+
+##
+# block_process_generic - Process a generic block and write it to an output.
+#
+# @output: Output file to write to.
+# @blocks: Array of blocks to read from.
+# @id:     Identifier of the block to process.
+#
+# @return: None.
+function block_process_generic(output, blocks, id,                        c, i)
+{
+	c = ""
+	if (blocks[id, "lines"] > 0) {
+		c = sprintf("%s\"%s\"", c,
+		            json_string_escape(blocks[id, "line", 0]))
+
+		for (i = 1; i < blocks[id, "lines"]; i++) {
+			c = sprintf("%s,\"%s\"", c,
+			            json_string_escape(blocks[id, "line", i]))
+		}
+
+	}
+
+	block_write(output, blocks, id, c)
+}
+
+##
 # getopt - POSIX getopt(3) implementation.
 #
 # @argc:      See awk(1) ARGC.
@@ -456,17 +725,13 @@ function main(argc, argv,           blocks, fi, opt, type, e, f, g, h, i, o, v)
 		o = "/dev/stdout"
 
 	for (i = 0; i < blocks["@blocks"]; i++) {
-		if (blocks[i, "type"] == "function" && !f)
-			continue
-		else if (blocks[i, "type"] == "generic" && !g)
-			continue
+		type = blocks[i, "type"]
 
-		printf("block %d, %s (%s:%d)\nmarkup: %s\n", i,
-		       blocks[i, "type"], blocks[i, "file"],
-		       blocks[i, "init"], blocks[i, "markup"]) >o
-
-		for (j = 0; j < blocks[i, "lines"]; j++)
-			printf("%2d: %s\n", j, blocks[i, "line", j]) >o
+		if (type == "function" && f) {
+			block_process_function(o, blocks, i)
+		} else if (type == "generic" && g) {
+			block_process_generic(o, blocks, i)
+		}
 	}
 
 	return 0
