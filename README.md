@@ -4,6 +4,12 @@
 
 ## Overview
 
+**procdoc** [ **-fghv** ] [ **-f** _format_ ] [ **-o** _file_ ] [ **-t** _type_ ] [ _file_ ]...
+
+**procdoc** [ **-fghv** ] [ **-f** _format_ ] [ **-i** _file_ ] [ **-o** _file_ ] [ **-t** _type_ ]
+
+**awk** **-f** _/path/to/procdoc.awk_ **--** [ **-fghv** ] [ **-o** _file_ ] [ **-t** _type_ ] [ _file_ ]...
+
 A tool for extracting documentation from marked comments in source code files.
 A smaller hammer for a smaller nail than tools like [Doxygen][url-doxygen] and
 [Sphinx][url-sphinx]. Vaguely inspired by the Linux kernel's function
