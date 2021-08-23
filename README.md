@@ -4,7 +4,7 @@
 
 A tool for extracting documentation from marked comments in source code files.
 A smaller hammer for a smaller nail than tools like [Doxygen][url-doxygen] and
-[Sphinx][url-sphinx]. Vaguely inspiried by the Linux kernel's function
+[Sphinx][url-sphinx]. Vaguely inspired by the Linux kernel's function
 documentation comment format.
 
 ## Dependencies
