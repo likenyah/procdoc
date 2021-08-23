@@ -1,5 +1,7 @@
 # procdoc
 
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E65IUF4)
+
 ## Overview
 
 A tool for extracting documentation from marked comments in source code files.
