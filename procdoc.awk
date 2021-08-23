@@ -16,7 +16,7 @@
 # -----------------------------------------------------------------------------
 
 ##
-# warning - Write a warning message to stderr(3).
+# warning - Write a warning message to man:stderr(3).
 #
 # @msg: Message to write.
 #
@@ -27,7 +27,7 @@ function warning(msg)
 }
 
 ##
-# warningfl - Write a warning message with file information to stderr(3).
+# warningfl - Write a warning message with file information to man:stderr(3).
 #
 # @file: File in which the error occurred.
 # @line: Line number on which the error occurred.
@@ -40,7 +40,7 @@ function warningfl(file, line, msg)
 }
 
 ##
-# error - Write an error message to stderr(3).
+# error - Write an error message to man:stderr(3).
 #
 # @msg: Message to write.
 #
@@ -51,7 +51,7 @@ function error(msg)
 }
 
 ##
-# errorfl - Write an error message with file information to stderr(3).
+# errorfl - Write an error message with file information to man:stderr(3).
 #
 # @file: File in which the error occurred.
 # @line: Line number on which the error occurred.
@@ -64,7 +64,7 @@ function errorfl(file, line, msg)
 }
 
 ##
-# fatal - Write an error message to stderr(3) and exit.
+# fatal - Write an error message to man:stderr(3) and exit.
 #
 # @msg: Message to write.
 #
@@ -76,7 +76,7 @@ function fatal(msg)
 }
 
 ##
-# fatalfl - Write an error message with file information to stderr(3) and exit.
+# fatalfl - Write an error message with file information to man:stderr(3) and exit.
 #
 # @file: File in which the error occurred.
 # @line: Line number on which the error occurred.
@@ -200,9 +200,9 @@ function delim_get(delim, filetype)
 ##
 # delim_match - Attempt to match the current input line against a delimiter.
 #
-# @delim:  Delimiter array, indexable by delim[type, member].
+# @delim:  Delimiter array, indexable by `delim[type, member]`.
 # @member: Member name of the delimiter to match against.
-# @r:      Type data return array. r["type"] will be set to that of the
+# @r:      Type data return array. `r["type"]` will be set to that of the
 #          matching delimiter type.
 #
 # @return: 1 if the specified delimiter was matched, else 0.
@@ -223,14 +223,14 @@ function delim_match(delim, member, r)
 ##
 # block_read - Read the next documentation block from a given file.
 #
-# @fileinfo:     Array containing the path to - fileinfo["path"] - and current
-#                line number of - fileinfo["lineno"] - the file. The line
-#                number will be incremented by the number of lines consumed by
-#                block_read().
-# @blocks:       Array of blocks to append to. The meta-entry blocks["@blocks"]
-#                is expected to store the number of blockes currently in the
-#                array and will be incremented upon successfully reading a
-#                block.
+# @fileinfo:     Array containing the path to -- `fileinfo["path"]` -- and
+#                current line number of -- `fileinfo["lineno"]` -- the file.
+#                The line number will be incremented by the number of lines
+#                consumed by block_read().
+# @blocks:       Array of blocks to append to. The meta-entry
+#                `blocks["@blocks"]` is expected to store the number of blocks
+#                currently in the array and will be incremented upon
+#                successfully reading a block.
 # @default_type: Default filetype to use if it cannot be determined by the
 #                filename.
 #
@@ -562,23 +562,24 @@ function block_process_generic(output, blocks, id,                        c, i)
 }
 
 ##
-# getopt - POSIX getopt(3) implementation.
+# getopt - POSIX man:getopt(3) implementation.
 #
-# @argc:      See awk(1) ARGC.
-# @argv:      See awk(1) ARGV.
-# @optstring: See getopt(3).
+# @argc:      See man:awk(1) ARGC.
+# @argv:      See man:awk(1) ARGV.
+# @optstring: See man:getopt(3).
 #
 # @return: Next option character as a string, on success. If the next option
-#          character is not in optstring, then "?" if ":" was not the first
-#          character in optstring, else ":". If there are no more options or
-#          the end of argv was encountered, then -1.
+#          character is not in optstring, then `"?"` if `":"` was not the first
+#          character in optstring, else `":"`. If there are no more options or
+#          the end of <<argv>> was encountered, then -1.
 #
 # This implementation is loosely based on the musl libc implementation of
-# getopt(3). Some GNU extensions are supported: optional option arguments may
-# be specified in optstring with two colons; an initial "-" in optstring will
-# cause getopt() to treat all non-options as option arguments to 1 (the
+# man:getopt(3). Some GNU extensions are supported: optional option arguments
+# may be specified in optstring with two colons; an initial "-" in optstring
+# will cause getopt() to treat all non-options as option arguments to 1 (the
 # integer, not the character); and an inital "+" is supported but ignored. (We
-# don't permute argv but this may be useful to implement getopt_long(3).)
+# don't permute <<argv>> but this may be useful to implement
+# man:getopt_long(3).)
 function getopt(argc, argv, optstring,                                    c, i)
 {
 	if (!optind || optreset) {
