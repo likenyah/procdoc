@@ -1,0 +1,136 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "urn:uuid:c34b7767-1bb1-5ae2-91fe-0adf34a7702b",
+	"title": "Procdoc Output Block",
+	"description": "Output block format schema for procdoc.awk",
+	"type": "object",
+	"properties": {
+		"id": {
+			"description": "Block identifer, unique withing a single run.",
+			"type": "integer",
+			"minimum": 0
+		},
+		"type": {
+			"description": "Block content type.",
+			"type": "string",
+			"enum": [
+				"function",
+				"generic"
+			]
+		},
+		"markup": {
+			"description": "Markup hint, primarily for generic blocks.",
+			"type": "string"
+		},
+		"file": {
+			"description": "Path to the file containing this block.",
+			"type": "string"
+		},
+		"lines": {
+			"description": "Line number information.",
+			"type": "object",
+			"properties": {
+				"initial": {
+					"description": "Line on which the block started in the original file. This is number of the head line.",
+					"type": "integer",
+					"minimum": 1
+				},
+				"total": {
+					"description": "Number of content lines within the block. This does not include the head or tail lines.",
+					"type": "integer",
+					"minimum": 0
+				}
+			},
+			"required": [
+				"initial",
+				"total"
+			]
+		},
+		"content": {
+			"oneOf": [
+				{ "$ref": "#/$defs/function-content" },
+				{ "$ref": "#/$defs/generic-content" }
+			]
+		}
+	},
+	"required": [
+		"content",
+		"file",
+		"id",
+		"lines",
+		"markup",
+		"type"
+	],
+	"$defs": {
+		"function-content": {
+			"description": "Content contained in a function block.",
+			"type": "object",
+			"properties": {
+				"name": {
+					"description": "Function identifer.",
+					"type": "string"
+				},
+				"short-description": {
+					"description": "",
+					"type": "string"
+				},
+				"members": {
+					"description": "Function arguments.",
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"name": {
+								"description": "Argument identifer.",
+								"type": "string"
+							},
+							"description": {
+								"description": "Associated description paragraph.",
+								"type": "string"
+							}
+						},
+						"required": [
+							"description",
+							"name"
+						]
+					}
+				},
+				"description": {
+					"description": "Extra description paragraphs.",
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"heading": {
+								"description": "Heading for this paragraph.",
+								"type": "string"
+							},
+							"paragraph": {
+								"description": "Content of this paragraph. This is the concatenation of adjacent non-empty description lines.",
+								"type": "string"
+							}
+						},
+						"required": [
+							"heading",
+							"paragraph"
+						]
+					}
+				}
+			},
+			"required": [
+				"description",
+				"members",
+				"name",
+				"short-description"
+			]
+		},
+		"generic-content": {
+			"description": "Content contained in generic block.",
+			"type": "array",
+			"items": {
+				"description": "Lines from the block, stripped of the lead.",
+				"type": "string"
+			}
+		}
+	}
+}
